@@ -29,63 +29,23 @@ namespace ExportDb
                     Program.PrintHelp();
                     return;
                 }
-                string _connectionString = "server=(local);database=Metadata;trusted_connection=yes";
-                ScriptingOptions _options = new ScriptingOptions()
+                string _connectionString = _arguments["con"];
+                string _outputDirectory = _arguments["out"];
+                bool _verbose = _arguments["v"] != null;
+                if (_connectionString == null || _outputDirectory == null)
                 {
-                    AllowSystemObjects = false,
-                    ScriptData = true,
-                    ScriptSchema = false
-                };
-                string _outputDir = @"C:\data";
-                Encoding _encoding = Encoding.Unicode;
-                int _commandTerminatorInterval = 100;
-                
-                // connection
-                SqlConnection _connection = new SqlConnection(_connectionString);
-                ServerConnection _serverConn = new ServerConnection(_connection);
-                Server _server = new Server(_serverConn);
-                _server.SetDefaultInitFields(typeof(Table), "IsSystemObject");
-                Database _db = _server.Databases[_connection.Database];
-
-                Scripter _scripter = new Scripter(_server);
-                _scripter.Options = _options;
-                foreach (Table _table in _db.Tables)
-                {
-                    if (!_table.IsSystemObject)
-                    {
-                        // output file
-                        string _regexSearch = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
-                        Regex _regex = new Regex(string.Format("[{0}]", Regex.Escape(_regexSearch)));
-                        string _escapedName = _regex.Replace(_table.Name, ".");
-                        string _fileName = Path.Combine(_outputDir, string.Format("{0}.{1}.Table.sql", _table.Schema, _escapedName));
-                        string _directoryName = Path.GetDirectoryName(_fileName);
-                        if (!Directory.Exists(_directoryName))
-                        {
-                            Directory.CreateDirectory(_directoryName);
-                        }
-
-                        // alternatively
-                        // _scripter.Options.ToFileOnly = true;
-                        // _scripter.Options.FileName = _fileName;
-                        // _options.NoCommandTerminator = true;
-                        // _scripter.EnumScript(new Urn[] { _table.Urn });
-                        using (StreamWriter _writer = new StreamWriter(_fileName, false, _encoding))
-                        {
-                            int _row = 0;
-                            foreach (string _scriptLine in _scripter.EnumScript(new Urn[] { _table.Urn }))
-                            {
-                                if (_row > 0 && _row % _commandTerminatorInterval == 0)
-                                {
-                                    _writer.WriteLine("GO");
-                                }
-                                _writer.WriteLine(_scriptLine);
-                                _row++;
-                            }
-                        }
-                    }
+                    Program.PrintHelp();
+                    return;
                 }
 
-                //Console.ReadKey();
+                if (!Directory.Exists(_outputDirectory))
+                {
+                    Directory.CreateDirectory(_outputDirectory);
+                }
+
+                Exporter _worker = new Exporter();
+                _worker.ExportData(_connectionString, _outputDirectory, _verbose);
+
             }
             catch (Exception _e)
             {
@@ -107,8 +67,11 @@ namespace ExportDb
         private static void PrintHelp()
         {
             Console.WriteLine(
-@"ExportDb.exe usage:
-
+@"Usage:
+    ExportDb.exe
+        -con:<connection string> 
+        -out:<output directory> 
+        [-v] 
 ");
         }
     }
