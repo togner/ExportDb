@@ -14,6 +14,18 @@ namespace ExportDb
         public Encoding Encoding { get; set; }
         public bool PrintProcessedRecords { get; set; }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether when command terminator
+        /// interval is set to 101 print processed should display 100
+        /// (...202 rows processed, but we indicate to user only 200, 303 rows 
+        /// processed, we indicate 300, etc.)
+        /// Replicating buggy behavior in SSMS 10.50.
+        /// </summary>
+        public bool OffByOne { get; set; }
+
+        private static readonly string CommandTerminator = "GO";
+        private static readonly string PrintProcessedRecordsFormat = "print 'Processed {0} total records'";
+
         public Exporter()
         {
             this.Encoding = Encoding.Unicode;
@@ -64,15 +76,25 @@ namespace ExportDb
                 int _row = 0;
                 foreach (string _scriptLine in scripter.EnumScript(new Urn[] { table.Urn }))
                 {
+                    // FIXME: IDENTITY_INSERT ON ends with [space][cr+lf] when scripted by SMO
+                    // but not when scripted by SSMS 10.50
+                    string _trimmedScriptLine = _scriptLine.TrimEnd('\r', '\n', ' ');
                     if (_row > 0 && _row % this.CommandTerminatorInterval == 0)
                     {
-                        _writer.WriteLine("GO");
+                        _writer.WriteLine(Exporter.CommandTerminator);
                         if (this.PrintProcessedRecords)
                         {
-                            _writer.WriteLine("print 'Processed {0} total records'", _row);
+                            int _processedRows = _row;
+
+                            //FIXME: Find out why is this necessary
+                            if (this.OffByOne)
+                            {
+                                _processedRows -= _row / this.CommandTerminatorInterval;
+                            }
+                            _writer.WriteLine(Exporter.PrintProcessedRecordsFormat, _processedRows);
                         }
                     }
-                    _writer.WriteLine(_scriptLine);
+                    _writer.WriteLine(_trimmedScriptLine);
                     _row++;
                 }
             }

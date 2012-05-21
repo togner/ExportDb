@@ -42,6 +42,7 @@ namespace ExportDb
                 {
                     _printProcessed = true;
                 }
+                bool _offByOne = _arguments["offByOne"] != null;
 
                 if (_connectionString == null || _outputDirectory == null)
                 {
@@ -60,6 +61,7 @@ namespace ExportDb
                     _worker.CommandTerminatorInterval = _goInterval;
                 }
                 _worker.PrintProcessedRecords = _printProcessed;
+                _worker.OffByOne = _offByOne;
                 _worker.ExportData(_connectionString, _outputDirectory, _verbose);
 
             }
