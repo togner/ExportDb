@@ -32,6 +32,17 @@ namespace ExportDb
                 string _connectionString = _arguments["con"];
                 string _outputDirectory = _arguments["out"];
                 bool _verbose = _arguments["v"] != null;
+                int _goInterval;
+                if (!int.TryParse(_arguments["go"], out _goInterval))
+                {
+                    _goInterval = 100;
+                }
+                bool _printProcessed;
+                if (!bool.TryParse(_arguments["printProcessed"], out _printProcessed))
+                {
+                    _printProcessed = true;
+                }
+
                 if (_connectionString == null || _outputDirectory == null)
                 {
                     Program.PrintHelp();
@@ -44,6 +55,11 @@ namespace ExportDb
                 }
 
                 Exporter _worker = new Exporter();
+                if (_goInterval > 0)
+                {
+                    _worker.CommandTerminatorInterval = _goInterval;
+                }
+                _worker.PrintProcessedRecords = _printProcessed;
                 _worker.ExportData(_connectionString, _outputDirectory, _verbose);
 
             }
@@ -70,8 +86,10 @@ namespace ExportDb
 @"Usage:
     ExportDb.exe
         -con:<connection string> 
-        -out:<output directory> 
-        [-v] 
+        -out:<output directory>     
+        [-v]                        Verbose (false)
+        [-go:<number>]              GO interval (100)
+        [-printProcessed:<bool>]    Print 'Processed xx total records' (true)
 ");
         }
     }

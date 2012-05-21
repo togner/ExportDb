@@ -12,11 +12,13 @@ namespace ExportDb
     {
         public int CommandTerminatorInterval { get; set; }
         public Encoding Encoding { get; set; }
+        public bool PrintProcessedRecords { get; set; }
 
         public Exporter()
         {
             this.Encoding = Encoding.Unicode;
             this.CommandTerminatorInterval = 100;
+            this.PrintProcessedRecords = true;
         }
 
         public void ExportData(string connectionString, string outputDirectory, bool verbose)
@@ -65,6 +67,10 @@ namespace ExportDb
                     if (_row > 0 && _row % this.CommandTerminatorInterval == 0)
                     {
                         _writer.WriteLine("GO");
+                        if (this.PrintProcessedRecords)
+                        {
+                            _writer.WriteLine("print 'Processed {0} total records'", _row);
+                        }
                     }
                     _writer.WriteLine(_scriptLine);
                     _row++;
